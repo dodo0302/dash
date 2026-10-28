@@ -1,0 +1,17 @@
+{
+  "name": "DASH 健康饮食助手",
+  "short_name": "DASH 助手",
+  "description": "输入身体数据，生成 DASH 控压饮食方案：每日份数、钠上限、蛋白质与钙目标。全部在本机计算。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf7fb",
+  "theme_color": "#faf7fb",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

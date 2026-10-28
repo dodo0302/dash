@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="URrzZG3LcDsVHCd7J2GTEO">
+<head data-page-node-id="uQWjFCmEH1rhYK1lG8pM7c">
+<meta charset="UTF-8" data-page-node-id="94AFapKmYtuDi65MHSXsCE">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="HvHlIMDrnF606izJmAXuR8">
+<meta name="description" content="输入身体数据，生成 DASH 控压饮食方案：每日份数、钠上限、蛋白质与钙目标。全部在本机计算，数据不上传。">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="DASH 助手">
+<meta name="theme-color" content="#faf7fb">
+<title>DASH 健康饮食助手 · 输入身体数据生成饮食方案</title>
+<style>
+  :root{
+    --bg:#faf7fb; --card:#ffffff; --ink:#2b2b33; --muted:#6b6b76;
+    --pink:#e879b4; --purple:#9b6bd6; --green:#3a9d6e; --line:#ece6f0;
+    --warn:#c0392b; --soft:#f4eef8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:linear-gradient(160deg,#fdf3fa 0%,#f3f0fb 100%); color:var(--ink);
+    line-height:1.6; padding:20px;
+  }
+  .wrap{max-width:860px; margin:0 auto;}
+  header{text-align:center; margin-bottom:18px;}
+  header h1{font-size:24px; margin:0 0 6px; color:var(--purple);}
+  header p{margin:0; color:var(--muted); font-size:14px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:18px 20px; margin-bottom:16px; box-shadow:0 2px 10px rgba(155,107,214,.05);}
+  .card h2{font-size:16px; margin:0 0 14px; color:var(--pink); display:flex; align-items:center; gap:8px;}
+  .card h2::before{content:""; width:6px; height:18px; background:linear-gradient(var(--pink),var(--purple)); border-radius:3px;}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px 16px;}
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field.full{grid-column:1 / -1;}
+  label{font-size:13px; color:var(--muted);}
+  label b{color:var(--ink);}
+  input,select,textarea{
+    border:1px solid var(--line); border-radius:9px; padding:8px 10px; font-size:14px;
+    background:#fff; color:var(--ink); width:100%; font-family:inherit;
+  }
+  textarea{resize:vertical; min-height:52px;}
+  .chk{display:flex; flex-wrap:wrap; gap:10px;}
+  .chk label{display:flex; align-items:center; gap:5px; font-size:13px; background:var(--soft);
+    padding:6px 10px; border-radius:20px; cursor:pointer; color:var(--ink);}
+  .chk input{width:auto; margin:0;}
+  button.go{
+    width:100%; padding:13px; border:none; border-radius:12px; cursor:pointer;
+    background:linear-gradient(135deg,var(--pink),var(--purple)); color:#fff;
+    font-size:16px; font-weight:600; letter-spacing:1px; transition:.2s;
+  }
+  button.go:hover{opacity:.92; transform:translateY(-1px);}
+  .result{display:none;}
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px;}
+  .kpi{background:var(--soft); border-radius:12px; padding:12px; text-align:center;}
+  .kpi .v{font-size:20px; font-weight:700; color:var(--purple);}
+  .kpi .l{font-size:12px; color:var(--muted); margin-top:2px;}
+  table{width:100%; border-collapse:collapse; font-size:14px; margin-top:4px;}
+  th,td{border:1px solid var(--line); padding:8px 10px; text-align:left;}
+  th{background:var(--soft); color:var(--purple); font-weight:600;}
+  td.num{text-align:center; font-weight:600; color:var(--green);}
+  .note{background:#fff7f0; border-left:4px solid var(--pink); padding:10px 14px;
+    border-radius:0 10px 10px 0; margin:10px 0; font-size:14px;}
+  .note.warn{background:#fdecea; border-left-color:var(--warn);}
+  .tip{font-size:13px; color:var(--muted); margin-top:8px;}
+  .meal{font-size:14px;}
+  .meal li{margin:4px 0;}
+  .intro{background:var(--soft); border:1px solid #e6dbf2; box-shadow:none;}
+  .intro p{margin:0; font-size:14px; color:#4a4a55;}
+  .intro p+p{margin-top:8px;}
+  .intro b{color:var(--purple);}
+  .score{margin:6px 0 2px;}
+  .srow{margin-bottom:18px;}
+  .srow:last-child{margin-bottom:6px;}
+  .shead{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;}
+  .snm{font-size:13px; color:var(--muted);}
+  .sval{font-size:24px; font-weight:700; line-height:1; color:var(--purple);}
+  .badge{font-size:12px; font-weight:600; padding:2px 10px; border-radius:999px;}
+  .b-ok{background:#e3f3e8; color:#2f7d52;}
+  .b-mid{background:#fbf0da; color:#9a6a15;}
+  .b-low{background:#fbe5df; color:#b04a33;}
+  .sword{font-size:12px; color:var(--muted);}
+  .sbar{position:relative; height:9px; border-radius:99px; margin:10px 0 6px; display:flex;}
+  .sbar i{display:block; height:100%;}
+  .sbar i:first-child{border-radius:99px 0 0 99px;}
+  .sbar i:last-child{border-radius:0 99px 99px 0;}
+  .sptr{position:absolute; top:50%; width:12px; height:12px; border-radius:50%; background:#fff;
+    border:3px solid var(--purple); transform:translate(-50%,-50%); box-shadow:0 1px 3px rgba(0,0,0,.18);}
+  .sref{font-size:11px; color:#a49bb0;}
+  .src{background:#fbfafd; border:1px dashed #ded4ea; border-radius:12px;
+    padding:12px 16px; margin-bottom:16px; font-size:12px; color:var(--muted); line-height:1.75;}
+  .src b{color:var(--purple); font-size:13px;}
+  .src ol{margin:6px 0 0; padding-left:20px;}
+  .src li{margin:3px 0;}
+  .src a{color:var(--purple); word-break:break-all;}
+  footer{text-align:center; color:var(--muted); font-size:12px; margin-top:10px;}
+  @media(max-width:620px){.grid{grid-template-columns:1fr;} .kpis{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body data-page-node-id="NhyhMT9BJDikSYLIR61LyH">
+<div class="wrap" data-page-node-id="XATENEvmMdwMAH5jShO4Br">
+  <header data-page-node-id="aIsNeZNQtOTbGoBuEyCZ9F">
+    <h1 data-page-node-id="TdM4aYO8UH0X11AB1sx3R8">DASH 健康饮食助手</h1>
+    <p data-page-node-id="hf3tAb4wO9PNztP2A4oVI7">输入身体数据，生成你的 DASH（得舒）饮食方案 · 纯本地计算，数据不出本机</p>
+  </header>
+
+  <div class="card intro">
+    <p><b>DASH 是什么？</b>DASH 是「Dietary Approaches to Stop Hypertension」的缩写，中文叫得舒饮食，由美国国立卫生研究院（NIH）为控压而研究设计，多年被各类饮食榜单评为心脏健康第一名。</p>
+    <p><b>它怎么做？</b>多吃蔬菜水果、全谷物、低脂奶和鱼禽豆，少吃红肉、甜食和盐，靠充足的钾、钙、镁和不饱和脂肪，把血压一点点降下来。下面的表格就是 DASH 每天该吃的份数。</p>
+  </div>
+
+  <div class="card" data-page-node-id="vAQX88VwAAMvewjNMxDYaL">
+    <h2 data-page-node-id="NCpI2dNRq0EAYw0ahHyZfF">一、基础身体数据（必填）</h2>
+    <div class="grid" data-page-node-id="EooyOhwG5y5Ho5CoK8C25D">
+      <div class="field" data-page-node-id="MlgdFnDhxXkBFnDfIL33NM"><label data-page-node-id="wGnfhvvD5jOhVQng1pbWc8"><b data-page-node-id="y252w8Fa90KyANBFjzjxlI">性别</b></label>
+        <select id="sex" data-page-node-id="h2AfSucxfufVO5jcpjYSsB">
+          <option value="" selected data-page-node-id="zNuxM2wwcp4kOkUzUDv9BM">请选择</option>
+          <option value="女" data-page-node-id="llsHVcYr7WCn0xEAeD77UR">女</option>
+          <option value="男" data-page-node-id="WT40V1glzutWInpuaU05uI">男</option>
+        </select></div>
+      <div class="field" data-page-node-id="GiINqLjxO8k9bADOlP7V89"><label data-page-node-id="FvUnTJ0z36ODvkCHDSs0nR"><b data-page-node-id="muKvudXtHo2CkllaqtPjGg">年龄</b>（岁）</label>
+        <input id="age" type="number" min="14" max="100" placeholder="如 56" data-page-node-id="Geh7G84sLjFNFUZNmtDNMp"></div>
+      <div class="field" data-page-node-id="hk58azXz0SQCUeiVvLMtaB"><label data-page-node-id="TbNKiSS7Qtlt4uWOAtHjdU"><b data-page-node-id="9b9RT9BsJioEUqjUMdY8Cr">身高</b>（cm）</label>
+        <input id="height" type="number" min="120" max="210" placeholder="如 165" data-page-node-id="T7MNa57VSaHK2eE9iQO6mf"></div>
+      <div class="field" data-page-node-id="uGQN3ebPCjxqakcmzuE7ic"><label data-page-node-id="zrrSSBXcFMf6qEKlh0JHUT"><b data-page-node-id="Xlof21na31OIqeOoS5JpM9">体重</b>（kg）</label>
+        <input id="weight" type="number" min="30" max="200" placeholder="如 54" data-page-node-id="m8F92YPqz3n5Zu9FGL8SrF"></div>
+      <div class="field" data-page-node-id="Og6X8gtePNUqlTQh369syW"><label data-page-node-id="g1h8LwwsAG7M4jgoGYCHmW"><b data-page-node-id="kEx45PhhFgGzDUvwBKcOzI">活动水平</b>（决定热量）</label>
+        <select id="activity" data-page-node-id="QznkBEZXXoP70ainPxjU8M">
+          <option value="" selected data-page-node-id="gM67YOQcZA5nNF1bEXq3XX">请选择</option>
+          <option value="1.2" data-page-node-id="Ws0SBkDDgdylDRlEPxWtxb">久坐：几乎不运动，整天坐着</option>
+          <option value="1.375" data-page-node-id="bAED3im8lCcwShfFn1UPgD">轻度：每周运动 1–3 次，或日常走路不少</option>
+          <option value="1.55" data-page-node-id="E6UaSYRS2YptEJTLr8I9BZ">中度：每周运动 3–5 次，每次 30 分钟以上</option>
+          <option value="1.65" data-page-node-id="Sm4IZBB7rjEz5gqvdXwAF2">活跃：每周运动 6 次以上，有氧和力量都练</option>
+          <option value="1.9" data-page-node-id="uYCeh1ANn4p2dhFuXQnJG6">极高：每天高强度训练，或体力劳动为主</option>
+        </select></div>
+      <div class="field" data-page-node-id="VGcNG3JNrhv3AftioDWDud"><label data-page-node-id="mfAmOn8basS4IFfOb2w65i"><b data-page-node-id="ikxWHQGH5As1eaQVgwjLR2">目标</b></label>
+        <select id="goal" data-page-node-id="lVAFCBazGF8ZazDhttHdfe">
+          <option value="" selected data-page-node-id="zTJ2Pwzsa6hkgJozRvHVn0">请选择</option>
+          <option value="维持" data-page-node-id="AHSv9DiU63PmZIHJm0gm6s">维持体重</option>
+          <option value="减脂" data-page-node-id="0Ik2NxLXwMEZ7V90wfd7Zq">缓慢减脂</option>
+          <option value="增肌" data-page-node-id="XVINygiZED1ea5OKTUGyek">增肌 / 身体成分重组</option>
+        </select></div>
+    </div>
+    <div class="tip">活动水平拿不准怎么选：以过去一个月的平均情况为准，宁可选低一档，别按最勤的那一周算。</div>
+  </div>
+
+  <div class="card" data-page-node-id="TLBj7fIewpPPmEF1mFxCDJ">
+    <h2 data-page-node-id="3HXTYczAoELBfdORsIYqRX">二、健康指标（选填，用于个性化提醒）</h2>
+    <div class="grid" data-page-node-id="rFD7lBlC3cZFa4dBB5760W">
+      <div class="field" data-page-node-id="bfwGEyvofWfb04CkA7Qf8W"><label data-page-node-id="6CSB2ECir7BSSU7L38ON4D">腰围（cm，用来算腰高比）</label>
+        <input id="waist" type="number" min="50" max="150" placeholder="如 78" data-page-node-id="gFz34FxKwn4a9jmyDmQIas"></div>
+      <div class="field" data-page-node-id="0nbUaZftj6EUvUcRiHiOI0"><label data-page-node-id="ZBNZIEWmckQCiPxz9nhBPG">血压 收缩压 / 舒张压（mmHg）</label>
+        <input id="sbp" type="number" min="80" max="220" placeholder="如 120" style="width:48%;display:inline" data-page-node-id="XeHLksg5Jqw5IGCr2aa8M6">
+        <input id="dbp" type="number" min="50" max="140" placeholder="如 80" style="width:48%;display:inline" data-page-node-id="M8tcHEzME7zXnq4eQmJDzs"></div>
+      <div class="field" data-page-node-id="jiQ8BcE8VDyw30BYPeY4nl"><label data-page-node-id="CSSnkZjmiAA2OiAXHycbDe">体脂率（%，选填更准）</label>
+        <input id="bf" type="number" min="5" max="60" placeholder="如 25" data-page-node-id="xtC2Il0PzYasoGee4kMqXZ"></div>
+      <div class="field" id="menoField" style="display:none;" data-page-node-id="cvPpBClwnSvae4qUoewTnN"><label data-page-node-id="6HOy2v3VEDNwgyEOwE1fGI">是否已绝经（含手术切除卵巢）</label>
+        <select id="meno" data-page-node-id="13BztPrH9rQ27GOqiDaHjp"><option value="0" selected data-page-node-id="gElyrfy6T6pwPHs9Sy6AX6">否</option><option value="1" data-page-node-id="98RmHf8dVgSaWg0PBKLoCr">是</option></select></div>
+      <div class="field full" id="menoNote" style="display:none;"><div style="font-size:13px;color:#8a8a8a;line-height:1.65;background:#f8f5fc;border-radius:8px;padding:9px 13px;">女性 50 岁及以上按绝经后处理，钙目标已直接算作 1200 mg，这一项不用填。</div></div>
+      <div class="field full" data-page-node-id="wexRPJv0k12mAO8YKUTjSd"><label data-page-node-id="FpsjBfuezi2YNEHVGIjK36">慢病 / 健康情况（可多选）</label>
+        <div class="chk" id="cond" data-page-node-id="zNHUH7urCLUPR75C3DSq5Y">
+          <label data-page-node-id="wJ6OkabOPVR6XGy4bZDnhq"><input type="checkbox" value="高血压" data-page-node-id="bMi2MIcbkXN4dkLhqIPrHK">高血压</label>
+          <label data-page-node-id="51EbRsYv5nWZTbSF2GjZhG"><input type="checkbox" value="高血脂" data-page-node-id="C2yRWqxcg3pwT5GNidqBuI">高血脂</label>
+          <label data-page-node-id="UIxoyaY0XfAbt3aEsmm6iC"><input type="checkbox" value="糖尿病" data-page-node-id="O1AOdAOVB1ETlXqO1GvPod">糖尿病</label>
+          <label data-page-node-id="C0j2n9a1D6lKBzxPPSuK5l"><input type="checkbox" value="肾病" data-page-node-id="kgBVvPeW58FEOz8WgflrYz">慢性肾病</label>
+          <label data-page-node-id="i4UoKyiJxrS0h2cZrKQCFJ"><input type="checkbox" value="无" data-page-node-id="6UI3HZbbsAYG2z29eHbAIn">无</label>
+        </div></div>
+    </div>
+  </div>
+
+  <div class="card" data-page-node-id="VZ9kGIn8XaydrBMLSmtGgb">
+    <h2 data-page-node-id="XE5ZSgFkGZel4BmCergFhh">三、饮食偏好（选填）</h2>
+    <div class="grid" data-page-node-id="UX2jDFdRFNC8h6aQKPlNQr">
+      <div class="field" data-page-node-id="bDqVnE43Tg9qXmWsFGdzqg"><label data-page-node-id="cWfQpSTbUogdAGFp7o6dWr">饮食模式</label>
+        <select id="diet" data-page-node-id="6uZZGOL7mVMnPUKUTTnRqO">
+          <option value="普通" data-page-node-id="bbdDcBdEWCWyQ38XdCg5qT">普通饮食</option>
+          <option value="蛋奶素" data-page-node-id="3T1luZZMeOIp01YvxOqilP">蛋奶素</option>
+          <option value="纯素" data-page-node-id="wVtKWVmCJs9vIMoU0Qo5EK">纯素（ vegan）</option>
+        </select></div>
+      <div class="field full" data-page-node-id="yKE2gdrbho48CVllhCJe7k"><label data-page-node-id="WGD9FvaNs8ewBcUKezCV3r">忌口 / 不爱吃的食材</label>
+        <textarea id="avoid" placeholder="如：不吃香菜、海鲜过敏、乳糖不耐受"></textarea></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>四、你现在每天大概吃多少份？（选填，用来做对比）</h2>
+    <div class="grid">
+      <div class="field"><label>蔬菜（份/天，1 份≈半碗熟菜）</label>
+        <input id="cur_veg" type="number" min="0" max="20" step="0.5" placeholder="如 3"></div>
+      <div class="field"><label>水果（份/天，1 份≈1 个中等苹果）</label>
+        <input id="cur_fruit" type="number" min="0" max="20" step="0.5" placeholder="如 1"></div>
+      <div class="field"><label>全谷（份/天，1 份≈30g 干燕麦）</label>
+        <input id="cur_grain" type="number" min="0" max="20" step="0.5" placeholder="如 4"></div>
+      <div class="field"><label>低脂奶（份/天，1 份≈240mL）</label>
+        <input id="cur_dairy" type="number" min="0" max="10" step="0.5" placeholder="如 1"></div>
+    </div>
+    <div class="tip">不填也能出方案。填了会在结果里多出一张「你现在 vs 建议」的对比表，标出差得最多的那一组。</div>
+  </div>
+
+  <button class="go" onclick="calc()" data-page-node-id="yeUKDOE8J0DOAAorXPvHAV">生成我的 DASH 饮食方案</button>
+
+  <div class="result" id="result" data-page-node-id="jPPz8mR6dCCZ246AkpqDe6">
+    <div class="card" data-page-node-id="HbPPAIcfcfsKwLEWFLLAAp">
+      <h2 data-page-node-id="HWhIoAX7EmqzRnPl2d8UA6">你的体质与热量</h2>
+      <div class="kpis" data-page-node-id="67o4c2XqsOSwN7zHVdrN8s">
+        <div class="kpi" data-page-node-id="NkZo9tPiEWsnBCK2ol52d3"><div class="v" id="r_bmi" data-page-node-id="WW2GdMKnDNE6YtN462EoNE">–</div><div class="l" data-page-node-id="QkaAb82aRC1bFzgTTH3HpU">BMI</div></div>
+        <div class="kpi" data-page-node-id="87mHi6ouSLfq1t8iYcwP16"><div class="v" id="r_bmr" data-page-node-id="sE5ATAKvNcRO8uuatdU2Z3">–</div><div class="l" data-page-node-id="ROBjuI6R4UEspCxMIc3idu">基础代谢 kcal</div></div>
+        <div class="kpi" data-page-node-id="9iaadzM4IF9AXyFj3bIK1A"><div class="v" id="r_tdee" data-page-node-id="hqnxZAz4PaY3junEBimPa9">–</div><div class="l" data-page-node-id="htt5A6lfMWPEQP416z0CQ9">每日总消耗 kcal</div></div>
+        <div class="kpi" data-page-node-id="85sCFIBb1onKfNV9vtuEby"><div class="v" id="r_target" data-page-node-id="OZL7CW5sIknDXCrWCCCk5n">–</div><div class="l" data-page-node-id="EDEc7Dsq4gEQ3E1iE3zKCS">推荐摄入 kcal</div></div>
+      </div>
+      <div id="r_bmiTag" class="tip" data-page-node-id="RbAan5H6d5TEWudFxhrwTp"></div>
+    </div>
+
+    <div class="card" id="shape_card" style="display:none">
+      <h2>体型评分</h2>
+      <div class="score" id="r_shape"></div>
+      <div class="tip" id="r_shape_tip"></div>
+    </div>
+
+    <div class="card" data-page-node-id="nuSl5564qzyDyNOVvpIpmN">
+      <h2 data-page-node-id="456D6UTqOCMgXXIItEb7w0">DASH 每日食物组份数（约 <span id="r_tier" data-page-node-id="fbounQJWrDkvTMiZlDENDW">–</span> kcal 标准）</h2>
+      <table data-page-node-id="fTh7QPDz8pEkcAxcEBRgcC">
+        <thead data-page-node-id="u6hjogFlHEWB1OvsUBl0iJ"><tr data-page-node-id="0hbu5Afb1hR6LvFwNGcjLI"><th data-page-node-id="exZO9p1pKmzicBFlOaXvdm">食物组</th><th data-page-node-id="y64CYsEASTXOT4ePtq3Uwu">每日份数</th><th data-page-node-id="Fu7YORnA6pjBKzslqTvSKw">1 份示例（生重/常用量）</th></tr></thead>
+        <tbody id="r_table" data-page-node-id="HSL9Z2suoP7vqHP8ocJvV1"></tbody>
+      </table>
+      <div class="tip" id="r_tiertip" data-page-node-id="tszYY5j778VCPrQaXus21W">份数为 NIH DASH 标准按热量档映射；全谷占主食多数，蔬菜水果补足钾镁，利于控压。</div>
+    </div>
+
+    <div class="card" id="cmp_card" style="display:none">
+      <h2>你现在吃的 vs 建议份数</h2>
+      <table>
+        <thead><tr><th>食物组</th><th>你现在</th><th>建议</th><th>差距</th></tr></thead>
+        <tbody id="r_cmp"></tbody>
+      </table>
+      <div id="r_cmp_tip" class="note"></div>
+      <div class="tip">差距按「建议份数的下限」算，宁可先追上底线，再往上加。半份也算，别为了凑整数硬吃。</div>
+    </div>
+
+    <div class="card" data-page-node-id="vWyilHljxRG3j1zeDu8b6S">
+      <h2 data-page-node-id="Q8VqGOFGO3etOaFmGMCxMF">关键营养素目标</h2>
+      <div class="kpis" style="grid-template-columns:repeat(4,1fr)" data-page-node-id="1CtrgxfaG0CyH5V94puHkQ">
+        <div class="kpi" data-page-node-id="vcRbbEfqQ0mZmrytOrrQFg"><div class="v" id="r_na" data-page-node-id="8X6QJwH6BaeWusMczCD87x">–</div><div class="l" data-page-node-id="54u4uZTChzAd3PP0biBwuS">钠上限 mg</div></div>
+        <div class="kpi" data-page-node-id="Ad53mvnaEGlHQwmLbPBCN7"><div class="v" id="r_pro" data-page-node-id="U0TBK4oOB0bFFtkQYYBpeA">–</div><div class="l" data-page-node-id="CNoOm6K3uuIamGIyVCuFJ5">蛋白质 g</div></div>
+        <div class="kpi" data-page-node-id="StRpGFulk85WV7z7oHM1kt"><div class="v" id="r_ca" data-page-node-id="HRnwaaAxbxjCKA6lznPUpz">–</div><div class="l" data-page-node-id="NZok3ixtEm5ACUBybReYVI">钙 mg</div></div>
+        <div class="kpi" data-page-node-id="m29cXuOfh0cv6tM05XZtuQ"><div class="v" data-page-node-id="OoVBiLV9urcA0jqaT34dWC">4700</div><div class="l" data-page-node-id="4IhwHMG563X0zwHPyGhPsG">钾 mg（目标）</div></div>
+      </div>
+    </div>
+
+    <div class="card" data-page-node-id="iPQ8ioAADN4LijDSPH8Bpd">
+      <h2 data-page-node-id="6KvAIjvmUEEPRcjBOqclgK">个性化提醒</h2>
+      <div id="r_notes" data-page-node-id="GSEs8jD2ezksTuvVfwjJKA"></div>
+    </div>
+
+    <div class="card" data-page-node-id="4QZFOkp0rFBxpBA3XnFqQm">
+      <h2 data-page-node-id="zzqpSYyt1yyD6nFupaH5pR">参考一日搭配（按份数举例）</h2>
+      <ul class="meal" id="r_meal" data-page-node-id="EULVlPcve3IpDHsBNLfEeU"></ul>
+      <div class="tip" data-page-node-id="A70LX4Hzw2AzNE7x2tlVjk">示例仅作份数参考，实际食材可按偏好与忌口替换；烹饪以蒸、炖、炒、凉拌多样化为宜，每日用油控制在份数内。</div>
+    </div>
+
+    <footer data-page-node-id="MX6cgx7FNLGxmlc2ViHGqd">本工具为健康饮食参考，不替代医生或营养师诊断。慢性病人群请遵医嘱。</footer>
+  </div>
+
+  <div class="src">
+    <b>资料来源</b>
+    <ol>
+      <li>美国国立卫生研究院心肺血液研究所（NHLBI, NIH）·《DASH 饮食计划》DASH Eating Plan：每日与每周食物组份数标准；钠上限 2300 mg，并注明「1500 mg 钠比 2300 mg 能更大幅度降低血压」。<a href="https://www.nhlbi.nih.gov/education/dash-eating-plan" target="_blank" rel="noopener">nhlbi.nih.gov/education/dash-eating-plan</a></li>
+      <li>NHLBI「What's on Your Plate?」各热量档食物计划表（1,400–1,600 / 1,800–2,000 / 2,600 kcal）：本工具的 1600 / 2000 / 2600 三档份数依此折算。</li>
+      <li>基础代谢公式：Mifflin-St Jeor（按体重）；填写体脂率时改用 Katch-McArdle（BMR = 370 + 21.6 × 去脂体重 kg）。每日总消耗 = 基础代谢 × 活动系数。</li>
+      <li>热量目标调整（维持 / 减脂 −400 kcal / 增肌 +150 kcal）、蛋白质 1.0–1.6 g/kg、钙 1000–1200 mg 属常见营养学推荐区间；具体请结合医生或注册营养师意见。</li>
+      <li>体型评分区间：BMI 采用中国卫生行业标准《成人体重判定》（WS/T 428—2013）成人分类，消瘦 &lt;18.5、正常 18.5–23.9、超重 24.0–27.9、肥胖 ≥28.0；腰高比采用英国 NICE《超重与肥胖管理》（NG246）第 1.9.14 条，健康 0.40–0.49、风险增加 0.50–0.59、高风险 ≥0.60，适用于 BMI &lt;35 的成人。<a href="https://www.nice.org.uk/guidance/ng246/chapter/Identifying-and-assessing-" target="_blank" rel="noopener">nice.org.uk/guidance/ng246</a></li>
+      <li>血压分类：中国高血压防治指南修订委员会《中国高血压防治指南（2024年修订版）》。诊室血压：正常 &lt;120/80 mmHg；正常高值 120–139 和/或 80–89 mmHg；1 级 140–159 和/或 90–99 mmHg；2 级 160–179 和/或 100–109 mmHg；3 级 ≥180 和/或 ≥110 mmHg。收缩压与舒张压分属不同级别时按较高者判定（「就高不就低」）。家庭自测的诊断标准不同于诊室：连续 5–7 天规范测量的平均值 ≥135/85 mmHg 即按高血压处理。单次测量不作诊断依据。</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+function num(id){const v=parseFloat(document.getElementById(id).value); return isNaN(v)?null:v;}
+
+// 诊室血压分类（《中国高血压防治指南》）：收缩压与舒张压分属不同级别时，按较高的那一级算。
+// 返回 g3/g2/g1/高血压分级、highNormal 正常高值、low 偏低、normal 正常
+function bpClass(sbp,dbp){
+  if(sbp==null && dbp==null) return null;
+  if((sbp!=null && sbp>=180) || (dbp!=null && dbp>=110)) return 'g3';
+  if((sbp!=null && sbp>=160) || (dbp!=null && dbp>=100)) return 'g2';
+  if((sbp!=null && sbp>=140) || (dbp!=null && dbp>=90))  return 'g1';
+  if((sbp!=null && sbp>=120) || (dbp!=null && dbp>=80))  return 'highNormal';
+  if((sbp!=null && sbp<90)   || (dbp!=null && dbp<60))   return 'low';
+  return 'normal';
+}
+
+function calc(){
+  const sex=document.getElementById('sex').value;
+  const age=num('age'), height=num('height'), weight=num('weight');
+  const act=parseFloat(document.getElementById('activity').value);
+  const goal=document.getElementById('goal').value;
+  const waist=num('waist'), sbp=num('sbp'), dbp=num('dbp'), bf=num('bf');
+  const meno=document.getElementById('meno').value==='1';
+  const diet=document.getElementById('diet').value;
+  const avoid=(document.getElementById('avoid').value||'').trim();
+
+  const missing=[];
+  if(!sex) missing.push('性别');
+  if(!age) missing.push('年龄');
+  if(!height) missing.push('身高');
+  if(!weight) missing.push('体重');
+  if(isNaN(act)) missing.push('活动水平');
+  if(!goal) missing.push('目标');
+  if(missing.length){alert('请先填好：'+missing.join('、')); return;}
+
+  // 慢病
+  const conds=[...document.querySelectorAll('#cond input:checked')].map(c=>c.value).filter(c=>c!=='无');
+  const bpk = bpClass(sbp,dbp);
+  const hasHTN = conds.includes('高血压') || bpk==='g1' || bpk==='g2' || bpk==='g3';
+
+  // BMR
+  let bmr, bmrMethod;
+  if(bf!=null && bf>0 && bf<60){
+    const lbm = weight*(1-bf/100);
+    bmr = 370 + 21.6*lbm;
+    bmrMethod='Katch-McArdle（按体脂率）';
+  }else if(sex==='女'){
+    bmr = 10*weight + 6.25*height - 5*age - 161;
+    bmrMethod='Mifflin-St Jeor（按体重）';
+  }else{
+    bmr = 10*weight + 6.25*height - 5*age + 5;
+    bmrMethod='Mifflin-St Jeor（按体重）';
+  }
+  bmr=Math.round(bmr);
+
+  const tdee=Math.round(bmr*act);
+  let target;
+  if(goal==='维持') target=tdee;
+  else if(goal==='减脂') target=tdee-400;
+  else target=tdee+150;
+  target=Math.round(target);
+
+  const bmi=(weight/((height/100)**2));
+  const bmiR=bmi.toFixed(1);
+
+  // DASH 档（宁可低一档：2312 这类中间值不跳到 2600 档）
+  let tier;
+  if(target<1900) tier=1600; else if(target<2400) tier=2000; else tier=2600;
+
+  const T={
+    1600:{grain:[6,6],veg:[3,4],fruit:[4,4],dairy:[2,3],meat:[3,4],nuts:3,oil:[2,2],sweets:5},
+    2000:{grain:[6,8],veg:[4,5],fruit:[4,5],dairy:[2,3],meat:[6,6],nuts:4,oil:[2,3],sweets:5},
+    2600:{grain:[10,11],veg:[5,6],fruit:[5,6],dairy:[3,3],meat:[6,6],nuts:5,oil:[3,3],sweets:2}
+  }[tier];
+
+  const fmt=(a,b)=> a===b? (a+' 份') : (a+'–'+b+' 份');
+  const rows=[
+    ['全谷（糙米/燕麦/杂粮饭等）', fmt(T.grain[0],T.grain[1]), '1 片全麦面包 / 30g 干燕麦 / ½ 碗熟米饭'],
+    ['蔬菜', fmt(T.veg[0],T.veg[1]), '½ 碗熟蔬菜（约 100g 生重）'],
+    ['水果', fmt(T.fruit[0],T.fruit[1]), '1 中等苹果 / 1 根香蕉 / ½ 杯浆果'],
+    ['低脂或脱脂奶', fmt(T.dairy[0],T.dairy[1]), '240mL 牛奶 / 200g 无糖酸奶'],
+    ['瘦肉 / 禽 / 鱼 / 豆蛋', fmt(T.meat[0],T.meat[1]), '约 30g 熟肉 / 1 个蛋 / ½ 杯豆类'],
+    ['坚果 / 种子 / 干豆（每周）', T.nuts+' 份/周', '约 15g 坚果 / 2 汤匙种子'],
+    ['油脂', fmt(T.oil[0],T.oil[1]), '1 茶匙植物油（约 5g）'],
+    ['添加糖（每周，限量）', T.sweets+' 份/周', '1 汤匙糖 / 1 小份甜点']
+  ];
+  let tbody='';
+  rows.forEach(r=>{tbody+='<tr><td>'+r[0]+'</td><td class="num">'+r[1]+'</td><td>'+r[2]+'</td></tr>';});
+  document.getElementById('r_table').innerHTML=tbody;
+  document.getElementById('r_tier').textContent=tier;
+  const tierTipBase='份数为 NIH DASH 标准按热量档映射；全谷占主食多数，蔬菜水果补足钾镁，利于控压。';
+  const tierGap=Math.abs(target-tier);
+  document.getElementById('r_tiertip').textContent = tierTipBase
+    + (tierGap>150 ? '你的推荐摄入 '+target+' kcal 与 '+tier+' 档相差 '+tierGap+' kcal，先按这一档吃，体重有变化再上下调一档。' : '');
+
+  // 现状对比（选填项）
+  const cmpItems=[
+    ['蔬菜', num('cur_veg'), T.veg[0], T.veg[1]],
+    ['水果', num('cur_fruit'), T.fruit[0], T.fruit[1]],
+    ['全谷', num('cur_grain'), T.grain[0], T.grain[1]],
+    ['低脂奶', num('cur_dairy'), T.dairy[0], T.dairy[1]]
+  ];
+  const filled=cmpItems.filter(c=>c[1]!=null);
+  const cmpCard=document.getElementById('cmp_card');
+  if(filled.length){
+    const r1=x=>Math.round(x*10)/10;
+    let gapMax=null, rowsCmp='';
+    filled.forEach(function(c){
+      const name=c[0], cur=c[1], lo=c[2], hi=c[3];
+      const d=r1(cur-lo);
+      let gapTxt, color;
+      if(d>=0){ gapTxt='已达标'; color='var(--green)'; }
+      else{
+        gapTxt='还差 '+Math.abs(d)+' 份'; color='var(--warn)';
+        if(!gapMax || Math.abs(d)>gapMax.d) gapMax={name:name, d:Math.abs(d)};
+      }
+      const sug = (lo===hi)? (lo+' 份') : (lo+'–'+hi+' 份');
+      rowsCmp+='<tr><td>'+name+'</td><td class="num" style="color:var(--ink)">'+cur+' 份</td><td>'+sug+'</td>'
+             + '<td style="color:'+color+';font-weight:600">'+gapTxt+'</td></tr>';
+    });
+    document.getElementById('r_cmp').innerHTML=rowsCmp;
+    document.getElementById('r_cmp_tip').innerHTML = gapMax
+      ? ('差得最多的是<b>'+gapMax.name+'</b>，还差 '+gapMax.d+' 份。先把这一组补上，比同时改五个地方更容易坚持。')
+      : '四组都达标了，接下来重点看钠和烹调油有没有超。';
+    cmpCard.style.display='block';
+  }else{
+    cmpCard.style.display='none';
+  }
+
+  // 营养素
+  const naLimit = hasHTN?1500:2300;
+  const ppk = goal==='增肌'?1.6 : goal==='减脂'?1.2 : 1.0;
+  const protein=Math.round(weight*ppk);
+  const calcium = (sex==='女' && (age>=50 || meno))?1200:1000;
+
+  document.getElementById('r_bmi').textContent=bmiR;
+  document.getElementById('r_bmr').textContent=bmr;
+  document.getElementById('r_tdee').textContent=tdee;
+  document.getElementById('r_target').textContent=target;
+  document.getElementById('r_na').textContent=naLimit;
+  document.getElementById('r_pro').textContent=protein;
+  document.getElementById('r_ca').textContent=calcium;
+
+  // BMI 判断（评级在下方「体型评分」里给，这里只交代算法出处）
+  document.getElementById('r_bmiTag').textContent='基础代谢按 '+bmrMethod+' 估算；下面评分用的参考区间来自中国成人 BMI 标准与腰高比共识。';
+
+  // 体型评分：BMI + 腰高比（腰围÷身高，无需臀围）
+  function bmiGrade(b){
+    if(b<18.5) return {g:'待改善', c:'b-low', w:'偏瘦',  ref:'正常范围 18.5–23.9，中国成人标准'};
+    if(b<24)   return {g:'优',     c:'b-ok',  w:'正常',  ref:'正常范围 18.5–23.9，中国成人标准'};
+    if(b<28)   return {g:'良',     c:'b-mid', w:'超重',  ref:'正常范围 18.5–23.9，中国成人标准'};
+    return      {g:'待改善', c:'b-low', w:'肥胖',  ref:'正常范围 18.5–23.9，中国成人标准'};
+  }
+  function whtrGrade(r){
+    if(r<0.40) return {g:'良',     c:'b-mid', w:'偏低',  ref:'健康区 0.40–0.49，0.5 为警戒线（NICE）'};
+    if(r<0.50) return {g:'优',     c:'b-ok',  w:'健康',  ref:'健康区 0.40–0.49，0.5 为警戒线（NICE）'};
+    if(r<0.60) return {g:'待改善', c:'b-low', w:'风险增加', ref:'健康区 0.40–0.49，0.5 为警戒线（NICE）'};
+    return      {g:'待改善', c:'b-low', w:'高风险', ref:'健康区 0.40–0.49，0.5 为警戒线（NICE）'};
+  }
+  function sbar(min,max,zones,val){
+    const span=max-min;
+    let seg='';
+    zones.forEach(function(z){
+      seg+='<i style="flex:0 0 '+((z[1]-z[0])/span*100).toFixed(2)+'%; background:'+z[2]+'"></i>';
+    });
+    let pct=(val-min)/span*100;
+    pct=Math.max(3,Math.min(97,pct));
+    return '<div class="sbar">'+seg+'<span class="sptr" style="left:'+pct.toFixed(1)+'%"></span></div>';
+  }
+
+  const bg=bmiGrade(bmi);
+  let shape='<div class="srow"><div class="shead"><span class="snm">BMI</span>'
+    +'<span class="sval">'+bmiR+'</span><span class="badge '+bg.c+'">'+bg.g+'</span>'
+    +'<span class="sword">'+bg.w+'</span></div>'
+    +sbar(15,35,[[15,18.5,'#f7dcd2'],[18.5,24,'#cfe8d8'],[24,28,'#f7e6bd'],[28,35,'#f2c3b4']],bmi)
+    +'<div class="sref">'+bg.ref+'</div></div>';
+
+  let whtr=null;
+  if(waist!=null && height!=null){
+    whtr=waist/height;
+    const wr=whtrGrade(whtr);
+    shape+='<div class="srow"><div class="shead"><span class="snm">腰高比</span>'
+      +'<span class="sval">'+whtr.toFixed(2)+'</span><span class="badge '+wr.c+'">'+wr.g+'</span>'
+      +'<span class="sword">'+wr.w+'</span></div>'
+      +sbar(0.30,0.70,[[0.30,0.40,'#f7dcd2'],[0.40,0.50,'#cfe8d8'],[0.50,0.60,'#f7e6bd'],[0.60,0.70,'#f2c3b4']],whtr)
+      +'<div class="sref">'+wr.ref+' ｜ 腰围 '+waist+' ÷ 身高 '+height+'，不用量臀围</div></div>';
+  }
+  document.getElementById('r_shape').innerHTML=shape;
+  document.getElementById('shape_card').style.display='block';
+
+  let stip;
+  if(whtr==null){
+    if(bmi<18.5) stip='BMI 偏低：先别减，优先把蛋白和全谷吃够，配合抗阻把肌肉练起来，比继续掉秤更重要。';
+    else if(bmi<24) stip='BMI 在健康区。填上腰围还能多算一个腰高比（腰围 ÷ 身高，0.5 以下是健康区），它比单看体重更能看出脂肪是不是堆在腰上。';
+    else if(bmi<28) stip='BMI 偏高（超重）：填上腰围能看脂肪分布，再决定是减脂为主，还是先保肌肉再慢慢调。';
+    else stip='BMI 已达肥胖：建议先做一次医学评估，再按上面的份数逐周往下调，别一次砍太多，容易反弹也难坚持。';
+  }else if(bmi<18.5 && whtr<0.40){
+    stip='两项都偏瘦：先别减，优先把蛋白和全谷吃够，配合抗阻把肌肉练起来，比继续掉秤更重要。';
+  }else if(bmi>=28 || whtr>=0.60){
+    stip='两项都偏高，风险叠加：建议先做一次医学评估，再按上面的份数逐周微调，别一次砍太多，容易反弹也难坚持。';
+  }else if(whtr>=0.50 && bmi<24){
+    stip='BMI 不高但腰围偏大，是典型的「体重正常、脂肪在腰」。重点减内脏脂肪，同时保住肌肉，别靠节食掉秤。';
+  }else if(whtr>=0.50){
+    stip='腰围偏大（腰高比超过 0.5），脂肪主要堆在腰腹部。先按上面的份数把总量收住，配合抗阻，腰围比体重更能反映进展。';
+  }else if(bmi>=24){
+    stip='BMI 偏高但腰高比还在健康区，脂肪分布不算差。减脂幅度不用大，把力量和蛋白保住，别一味掉秤。';
+  }else{
+    stip='两项都在健康区，接下来重点是守住肌肉量：蛋白吃够、每周 2–3 次抗阻，腰围会更稳，代谢也不容易往下掉。';
+  }
+  document.getElementById('r_shape_tip').textContent=stip;
+
+  // 提醒
+  let notes='';
+  // 血压文字：两个都填才拼成 135/85，只填一个也能说清楚
+  const bpText = (sbp!=null && dbp!=null) ? sbp+'/'+dbp+' mmHg'
+               : (sbp!=null ? '收缩压 '+sbp+' mmHg' : (dbp!=null ? '舒张压 '+dbp+' mmHg' : ''));
+  if(hasHTN){
+    let t='你自报高血压';
+    if(bpk==='g3') t='当前血压 '+bpText+'，达到 3 级高血压范围（收缩压 ≥180 或舒张压 ≥110），请尽快就医评估，饮食只是配合';
+    else if(bpk==='g2') t='当前血压 '+bpText+'，达到 2 级高血压范围（收缩压 160–179 或舒张压 100–109），建议就医确认，别只靠饮食';
+    else if(bpk==='g1') t='当前血压 '+bpText+'，达到 1 级高血压范围（收缩压 140–159 或舒张压 90–99）。单次测量不能诊断，建议非同日复测三次，仍高就到心内科确认';
+    else if(bpk==='highNormal') t='当前血压 '+bpText+' 属于正常高值，结合你自报的高血压，钠仍按严格目标控制';
+    else if(bpk==='normal') t='当前血压 '+bpText+' 在正常范围，结合你自报的高血压（多数是服药状态下的数值），钠仍按严格目标控制';
+    notes+='<div class="note warn">'+t+'。钠已设为严格上限 '+naLimit+' mg/天（≈盐 <4g），DASH 控压核心就是限钠，炒菜用盐要称。</div>';
+    if(bpk==='low') notes+='<div class="note warn">你的血压已经偏低。如果正在吃降压药，出现头晕、乏力、站起来眼前发黑，要和医生商量调整剂量，别自己停药。</div>';
+  }else if(bpk==='highNormal'){
+    notes+='<div class="note warn">当前血压 '+bpText+'，属于<b>正常高值</b>，已经偏高了，但还没到诊室高血压的线。按《中国高血压防治指南（2024年修订版）》，收缩压 120–139 或舒张压 80–89 mmHg 都算正常高值，这个阶段靠吃和动最容易拉回来。如果你是在家自测的，家庭标准更严：连续 5–7 天规范测量的平均值达到 135/85 mmHg 就要按高血压处理，先测几天取平均再看。钠上限按 '+naLimit+' mg/天给，能压到 1500 mg 更好。</div>';
+  }else if(bpk==='low'){
+    notes+='<div class="note">当前血压 '+bpText+'，偏低。如果伴有头晕、乏力、站起来眼前发黑，先看医生，别急着靠加盐解决。</div>';
+  }else if(bpk==='normal'){
+    notes+='<div class="note">当前血压 '+bpText+'，在正常范围（收缩压 <120 且舒张压 <80）。钠上限 '+naLimit+' mg/天；逐步向 1500 mg 靠拢更护血管。</div>';
+  }
+  if(conds.includes('高血脂')) notes+='<div class="note">高血脂：优先不饱和脂肪（橄榄油、坚果、鱼），限制饱和脂肪与反式脂肪；他汀人群注意不明肌肉酸痛及时就诊。</div>';
+  if(conds.includes('糖尿病')) notes+='<div class="note warn">糖尿病：主食选低升糖全谷，水果分餐吃、控制总量，监测餐后血糖。</div>';
+  if(conds.includes('肾病')) notes+='<div class="note warn">慢性肾病：蛋白质与钾需遵医嘱调整，本方案蛋白为一般推荐，请医生核定。</div>';
+  if(sex==='女' && meno) notes+='<div class="note">已绝经（含手术绝经）：雌激素下降后骨量流失加快，钙目标上调至 1200 mg，配合维 D 与每周 2–3 次负重运动。潮热明显时少碰辛辣、咖啡、酒精和滚烫饮品；豆腐、豆浆等大豆制品和亚麻籽可适量吃。</div>';
+  else if(sex==='女' && age>=50) notes+='<div class="note">女性 50 岁以上：钙目标已上调至 1200 mg，注意维 D 与负重运动护骨；豆制品和深绿色蔬菜是钙的补充来源。</div>';
+  if(diet==='纯素') notes+='<div class="note">纯素：蛋白与钙易缺，注意豆类、豆腐、强化植物奶，必要时补 B12。</div>';
+  if(avoid) notes+='<div class="note">已记录你的忌口：'+avoid+'。替换食材时避开上述项目即可。</div>';
+  if(!notes) notes='<div class="note">未填写健康指标，已给通用 DASH 建议。补全血压、腰围等可获得更精准提醒。</div>';
+  document.getElementById('r_notes').innerHTML=notes;
+
+  // 参考一日搭配
+  const meal=[
+    '早餐：奶昔（牛奶240mL+香蕉½+混合种子15g打碎）+ 水煮蛋1个 + 全谷主食1份 + 蔬菜1份（如菠菜入奶昔或快手蒸菜）',
+    '午餐：全谷饭2份（糙米/杂粮饭）+ 蔬菜2份 + 瘦肉/鱼/豆2份 + 油1份',
+    '加餐：水果1–2份（苹果/橙子/浆果）+ 坚果种子（周均4–5份分摊）',
+    '晚餐：薯类或全谷1–2份 + 蔬菜1–2份 + 禽/鱼/豆腐2份 + 低脂奶1份 + 油1份',
+    '每日饮水充足，烹饪以蒸、炖、炒、凉拌交替，用油不超 '+fmt(T.oil[0],T.oil[1])+' 的额度。'
+  ];
+  document.getElementById('r_meal').innerHTML=meal.map(m=>'<li>'+m+'</li>').join('');
+
+  document.getElementById('result').style.display='block';
+  document.getElementById('result').scrollIntoView({behavior:'smooth'});
+}
+
+// 绝经情况只在「女性 且 未满 50 岁」时询问：50 岁及以上直接按 1200 mg 钙处理，不再多问一题。
+// 50 岁及以上的女性改显示一行说明，避免用户以为这一项漏了。
+function syncMeno(){
+  const box=document.getElementById('menoField');
+  if(!box) return;
+  const note=document.getElementById('menoNote');
+  const sx=document.getElementById('sex').value;
+  const ag=parseFloat(document.getElementById('age').value);
+  const valid=!isNaN(ag)&&ag>=10;
+  const isF=sx==='女';
+  const show = isF && valid && ag<50;
+  const showNote = isF && valid && ag>=50;
+  box.style.display = show ? '' : 'none';
+  if(note) note.style.display = showNote ? '' : 'none';
+  if(!show){ const s=document.getElementById('meno'); if(s) s.value='0'; }
+}
+// 年龄逐字符输入时会先得到「5」再变成「56」，直接实时切换会让这一项闪一下，加个短延迟
+let menoTimer=null;
+function syncMenoLater(){ clearTimeout(menoTimer); menoTimer=setTimeout(syncMeno,280); }
+(function(){
+  const s=document.getElementById('sex');
+  if(s){ s.addEventListener('change',syncMeno); s.addEventListener('input',syncMeno); }
+  const a=document.getElementById('age');
+  if(a){ a.addEventListener('input',syncMenoLater); a.addEventListener('change',syncMeno); }
+})();
+syncMeno();
+
+// 慢病互斥：勾「无」就清掉其余四项；勾了任何一项具体疾病就自动取消「无」
+(function(){
+  const box=document.getElementById('cond');
+  if(!box) return;
+  box.addEventListener('change',function(ev){
+    const t=ev.target;
+    if(!t || t.tagName!=='INPUT' || t.type!=='checkbox') return;
+    const all=[].slice.call(box.querySelectorAll('input[type=checkbox]'));
+    if(t.value==='无' && t.checked){
+      all.forEach(function(c){ if(c!==t) c.checked=false; });
+    }else if(t.value!=='无' && t.checked){
+      all.forEach(function(c){ if(c.value==='无') c.checked=false; });
+    }
+  });
+})();
+</script>
+</body>
+</html>
