@@ -53,6 +53,13 @@
     font-size:16px; font-weight:600; letter-spacing:1px; transition:.2s;
   }
   button.go:hover{opacity:.92; transform:translateY(-1px);}
+  .savebar{display:flex; align-items:center; justify-content:space-between; gap:10px;
+    margin:11px 2px 0; font-size:12.5px; color:var(--muted); line-height:1.5;}
+  .savebar #save_hint{flex:1;}
+  .savebar .clear{flex:none; padding:7px 13px; border:1px solid var(--line); border-radius:9px;
+    background:#fff; color:var(--muted); font-size:12.5px; cursor:pointer; transition:.2s;}
+  .savebar .clear:hover{color:var(--pink); border-color:#e2d1f0;}
+  .savebar .clear:active{transform:scale(.97);}
   .result{display:none;}
   .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px;}
   .kpi{background:var(--soft); border-radius:12px; padding:12px; text-align:center;}
@@ -122,11 +129,11 @@
           <option value="男" data-page-node-id="WT40V1glzutWInpuaU05uI">男</option>
         </select></div>
       <div class="field" data-page-node-id="GiINqLjxO8k9bADOlP7V89"><label data-page-node-id="FvUnTJ0z36ODvkCHDSs0nR"><b data-page-node-id="muKvudXtHo2CkllaqtPjGg">年龄</b>（岁）</label>
-        <input id="age" type="number" min="14" max="100" placeholder="如 56" data-page-node-id="Geh7G84sLjFNFUZNmtDNMp"></div>
+        <input id="age" type="number" min="14" max="100" placeholder="如 40" data-page-node-id="Geh7G84sLjFNFUZNmtDNMp"></div>
       <div class="field" data-page-node-id="hk58azXz0SQCUeiVvLMtaB"><label data-page-node-id="TbNKiSS7Qtlt4uWOAtHjdU"><b data-page-node-id="9b9RT9BsJioEUqjUMdY8Cr">身高</b>（cm）</label>
-        <input id="height" type="number" min="120" max="210" placeholder="如 165" data-page-node-id="T7MNa57VSaHK2eE9iQO6mf"></div>
+        <input id="height" type="number" min="120" max="210" placeholder="如 170" data-page-node-id="T7MNa57VSaHK2eE9iQO6mf"></div>
       <div class="field" data-page-node-id="uGQN3ebPCjxqakcmzuE7ic"><label data-page-node-id="zrrSSBXcFMf6qEKlh0JHUT"><b data-page-node-id="Xlof21na31OIqeOoS5JpM9">体重</b>（kg）</label>
-        <input id="weight" type="number" min="30" max="200" placeholder="如 54" data-page-node-id="m8F92YPqz3n5Zu9FGL8SrF"></div>
+        <input id="weight" type="number" min="30" max="200" placeholder="如 65" data-page-node-id="m8F92YPqz3n5Zu9FGL8SrF"></div>
       <div class="field" data-page-node-id="Og6X8gtePNUqlTQh369syW"><label data-page-node-id="g1h8LwwsAG7M4jgoGYCHmW"><b data-page-node-id="kEx45PhhFgGzDUvwBKcOzI">活动水平</b>（决定热量）</label>
         <select id="activity" data-page-node-id="QznkBEZXXoP70ainPxjU8M">
           <option value="" selected data-page-node-id="gM67YOQcZA5nNF1bEXq3XX">请选择</option>
@@ -158,7 +165,7 @@
       <div class="field" data-page-node-id="jiQ8BcE8VDyw30BYPeY4nl"><label data-page-node-id="CSSnkZjmiAA2OiAXHycbDe">体脂率（%，选填更准）</label>
         <input id="bf" type="number" min="5" max="60" placeholder="如 25" data-page-node-id="xtC2Il0PzYasoGee4kMqXZ"></div>
       <div class="field" id="menoField" style="display:none;" data-page-node-id="cvPpBClwnSvae4qUoewTnN"><label data-page-node-id="6HOy2v3VEDNwgyEOwE1fGI">是否已绝经（含手术切除卵巢）</label>
-<select id="meno" data-page-node-id="13BztPrH9rQ27GOqiDaHjp"><option value="0" selected data-page-node-id="gElyrfy6T6pwPHs9Sy6AX6">否</option><option value="1" data-page-node-id="98RmHf8dVgSaWg0PBKLoCr">是</option></select><div id="menoRO" style="display:none;font-size:13px;color:#7b7b88;line-height:1.5;background:#f8f5fc;border:1px solid #ece6f0;border-radius:8px;padding:8px 12px;">按 50 岁及以上处理，钙目标已算作 1200 mg</div></div>
+<select id="meno" data-page-node-id="13BztPrH9rQ27GOqiDaHjp"><option value="0" selected data-page-node-id="gElyrfy6T6pwPHs9Sy6AX6">否</option><option value="1" data-page-node-id="98RmHf8dVgSaWg0PBKLoCr">是</option></select><div id="menoRO" style="display:none;"><select disabled style="color:#8a8a96;background:#f8f5fc;border-color:#ece6f0;-webkit-text-fill-color:#8a8a96;opacity:1;cursor:default;" data-page-node-id="ROauto1"><option selected>已绝经（自动判定）</option></select><div style="font-size:12px;color:#8a8a96;line-height:1.5;margin-top:2px;">50 岁及以上按绝经后处理，钙目标已按 1200 mg 计算，这一项不用填</div></div></div>
       <div class="field full" data-page-node-id="wexRPJv0k12mAO8YKUTjSd"><label data-page-node-id="FpsjBfuezi2YNEHVGIjK36">慢病 / 健康情况（可多选）</label>
         <div class="chk" id="cond" data-page-node-id="zNHUH7urCLUPR75C3DSq5Y">
           <label data-page-node-id="wJ6OkabOPVR6XGy4bZDnhq"><input type="checkbox" value="高血压" data-page-node-id="bMi2MIcbkXN4dkLhqIPrHK">高血压</label>
@@ -200,6 +207,11 @@
   </div>
 
   <button class="go" onclick="calc()" data-page-node-id="yeUKDOE8J0DOAAorXPvHAV">生成我的 DASH 饮食方案</button>
+
+  <div class="savebar">
+    <span id="save_hint">数据只存在本机，下次打开自动填好。</span>
+    <button class="clear" type="button" id="btn_clear">清空重填</button>
+  </div>
 
   <div class="result" id="result" data-page-node-id="jPPz8mR6dCCZ246AkpqDe6">
     <div class="card" data-page-node-id="HbPPAIcfcfsKwLEWFLLAAp">
@@ -290,7 +302,7 @@ function bpClass(sbp,dbp){
   return 'normal';
 }
 
-function calc(){
+function calc(silent){
   const sex=document.getElementById('sex').value;
   const age=num('age'), height=num('height'), weight=num('weight');
   const act=parseFloat(document.getElementById('activity').value);
@@ -557,7 +569,7 @@ function calc(){
   document.getElementById('r_meal').innerHTML=meal.map(m=>'<li>'+m+'</li>').join('');
 
   document.getElementById('result').style.display='block';
-  document.getElementById('result').scrollIntoView({behavior:'smooth'});
+  if(!silent) document.getElementById('result').scrollIntoView({behavior:'smooth'});
 }
 
 // 绝经情况只在「女性 且 未满 50 岁」时询问：50 岁及以上直接按 1200 mg 钙处理，不再多问一题。
@@ -603,6 +615,87 @@ syncMeno();
       all.forEach(function(c){ if(c.value==='无') c.checked=false; });
     }
   });
+})();
+
+// 记住填过的数据：只存在这台设备的浏览器里（localStorage），不上传任何服务器
+(function(){
+  const KEY='dash_form_v1';
+  const TXT=['age','height','weight','waist','sbp','dbp','bf','cur_veg','cur_fruit','cur_grain','cur_dairy'];
+  const SEL=['sex','activity','goal','meno','diet'];
+  const AVOID='avoid';
+  const COND='#cond input[type=checkbox]';
+  const REQUIRED=['sex','age','height','weight'];
+  const HINT_DEFAULT='数据只存在本机，下次打开自动填好。';
+  function $(id){ return document.getElementById(id); }
+
+  function collect(){
+    const o={v:{}, s:{}, a:'', c:[]};
+    TXT.forEach(function(id){ const e=$(id); if(e) o.v[id]=e.value; });
+    SEL.forEach(function(id){ const e=$(id); if(e) o.s[id]=e.value; });
+    const av=$(AVOID); if(av) o.a=av.value;
+    document.querySelectorAll(COND).forEach(function(c){ if(c.checked) o.c.push(c.value); });
+    return o;
+  }
+
+  function save(){
+    try{ localStorage.setItem(KEY, JSON.stringify(collect())); }catch(e){}
+  }
+
+  function restore(){
+    let o=null;
+    try{
+      const raw=localStorage.getItem(KEY);
+      if(!raw) return false;
+      o=JSON.parse(raw);
+    }catch(e){ return false; }
+    if(!o || typeof o!=='object') return false;
+    Object.keys(o.v||{}).forEach(function(id){ const e=$(id); if(e) e.value=o.v[id]; });
+    Object.keys(o.s||{}).forEach(function(id){ const e=$(id); if(e) e.value=o.s[id]; });
+    const av=$(AVOID); if(av && typeof o.a==='string') av.value=o.a;
+    if(Object.prototype.toString.call(o.c)==='[object Array]'){
+      document.querySelectorAll(COND).forEach(function(c){ c.checked=o.c.indexOf(c.value)>=0; });
+    }
+    return true;
+  }
+
+  function clearAll(){
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    TXT.forEach(function(id){ const e=$(id); if(e) e.value=''; });
+    const av=$(AVOID); if(av) av.value='';
+    document.querySelectorAll(COND).forEach(function(c){ c.checked=false; });
+    SEL.forEach(function(id){ const e=$(id); if(e) e.selectedIndex=0; });
+    const r=$('result'); if(r) r.style.display='none';
+    if(typeof syncMeno==='function') syncMeno();
+  }
+
+  let timer=null;
+  function scheduleSave(){
+    if(timer) clearTimeout(timer);
+    timer=setTimeout(save, 300);
+  }
+  document.addEventListener('input', scheduleSave, true);
+  document.addEventListener('change', scheduleSave, true);
+
+  const btn=$('btn_clear');
+  if(btn) btn.addEventListener('click', function(){
+    clearAll();
+    const hint=$('save_hint');
+    if(hint){
+      hint.textContent='已清空，可以重新填了。';
+      setTimeout(function(){ hint.textContent=HINT_DEFAULT; }, 2600);
+    }
+    const first=$('sex'); if(first && first.focus) first.focus();
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+
+  // 打开页面：回填；必填项齐全就直接把上次的方案算出来（不滚动，停在表单让用户自己看）
+  if(restore()){
+    if(typeof syncMeno==='function') syncMeno();
+    const ready=REQUIRED.every(function(id){ const e=$(id); return e && String(e.value).trim()!==''; });
+    if(ready && typeof calc==='function'){
+      try{ calc(true); }catch(e){}
+    }
+  }
 })();
 </script>
 </body>
