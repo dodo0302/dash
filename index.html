@@ -158,8 +158,7 @@
       <div class="field" data-page-node-id="jiQ8BcE8VDyw30BYPeY4nl"><label data-page-node-id="CSSnkZjmiAA2OiAXHycbDe">体脂率（%，选填更准）</label>
         <input id="bf" type="number" min="5" max="60" placeholder="如 25" data-page-node-id="xtC2Il0PzYasoGee4kMqXZ"></div>
       <div class="field" id="menoField" style="display:none;" data-page-node-id="cvPpBClwnSvae4qUoewTnN"><label data-page-node-id="6HOy2v3VEDNwgyEOwE1fGI">是否已绝经（含手术切除卵巢）</label>
-        <select id="meno" data-page-node-id="13BztPrH9rQ27GOqiDaHjp"><option value="0" selected data-page-node-id="gElyrfy6T6pwPHs9Sy6AX6">否</option><option value="1" data-page-node-id="98RmHf8dVgSaWg0PBKLoCr">是</option></select></div>
-      <div class="field full" id="menoNote" style="display:none;"><div style="font-size:13px;color:#8a8a8a;line-height:1.65;background:#f8f5fc;border-radius:8px;padding:9px 13px;">女性 50 岁及以上按绝经后处理，钙目标已直接算作 1200 mg，这一项不用填。</div></div>
+<select id="meno" data-page-node-id="13BztPrH9rQ27GOqiDaHjp"><option value="0" selected data-page-node-id="gElyrfy6T6pwPHs9Sy6AX6">否</option><option value="1" data-page-node-id="98RmHf8dVgSaWg0PBKLoCr">是</option></select><div id="menoRO" style="display:none;font-size:13px;color:#7b7b88;line-height:1.5;background:#f8f5fc;border:1px solid #ece6f0;border-radius:8px;padding:8px 12px;">按 50 岁及以上处理，钙目标已算作 1200 mg</div></div>
       <div class="field full" data-page-node-id="wexRPJv0k12mAO8YKUTjSd"><label data-page-node-id="FpsjBfuezi2YNEHVGIjK36">慢病 / 健康情况（可多选）</label>
         <div class="chk" id="cond" data-page-node-id="zNHUH7urCLUPR75C3DSq5Y">
           <label data-page-node-id="wJ6OkabOPVR6XGy4bZDnhq"><input type="checkbox" value="高血压" data-page-node-id="bMi2MIcbkXN4dkLhqIPrHK">高血压</label>
@@ -232,11 +231,11 @@
     <div class="card" id="cmp_card" style="display:none">
       <h2>你现在吃的 vs 建议份数</h2>
       <table>
-        <thead><tr><th>食物组</th><th>你现在</th><th>建议</th><th>差距</th></tr></thead>
+        <thead><tr><th>食物组</th><th>你现在</th><th>建议</th><th>结果</th></tr></thead>
         <tbody id="r_cmp"></tbody>
       </table>
       <div id="r_cmp_tip" class="note"></div>
-      <div class="tip">差距按「建议份数的下限」算，宁可先追上底线，再往上加。半份也算，别为了凑整数硬吃。</div>
+      <div class="tip">低于建议下限标「还差」，落在这个范围里标「已达标」，超过上限标「超出」。半份也照实填，别为了凑整数硬吃或硬减。</div>
     </div>
 
     <div class="card" data-page-node-id="vWyilHljxRG3j1zeDu8b6S">
@@ -381,24 +380,54 @@ function calc(){
   const cmpCard=document.getElementById('cmp_card');
   if(filled.length){
     const r1=x=>Math.round(x*10)/10;
-    let gapMax=null, rowsCmp='';
+    const OVER_NOTE={
+      '蔬菜':'蔬菜多吃本身不是坏事，但它占胃容量，别把蛋白质和主食挤掉；肾功能不全的人还要留意钾。',
+      '水果':'水果的果糖和热量会跟着上去，甘油三酯偏高的人尤其要收一收。',
+      '全谷':'全谷超量会把碳水和热量一起推高，还挤掉蛋白质的位置，主食这一组不必贪多。',
+      '低脂奶':'奶制品超量，钙和热量同时上去；2–3 份已经够，补钙不靠加量。'
+    };
+    let gapMax=null, overList=[], rowsCmp='';
     filled.forEach(function(c){
       const name=c[0], cur=c[1], lo=c[2], hi=c[3];
-      const d=r1(cur-lo);
       let gapTxt, color;
-      if(d>=0){ gapTxt='已达标'; color='var(--green)'; }
-      else{
-        gapTxt='还差 '+Math.abs(d)+' 份'; color='var(--warn)';
-        if(!gapMax || Math.abs(d)>gapMax.d) gapMax={name:name, d:Math.abs(d)};
+      if(cur<lo){
+        const d=r1(lo-cur);
+        gapTxt='还差 '+d+' 份'; color='var(--warn)';
+        if(!gapMax || d>gapMax.d) gapMax={name:name, d:d};
+      }else if(cur<=hi){
+        gapTxt='已达标'; color='var(--green)';
+      }else{
+        const o=r1(cur-hi);
+        gapTxt='超出 '+o+' 份'; color='#c2721a';
+        overList.push({name:name, over:o});
       }
       const sug = (lo===hi)? (lo+' 份') : (lo+'–'+hi+' 份');
       rowsCmp+='<tr><td>'+name+'</td><td class="num" style="color:var(--ink)">'+cur+' 份</td><td>'+sug+'</td>'
              + '<td style="color:'+color+';font-weight:600">'+gapTxt+'</td></tr>';
     });
     document.getElementById('r_cmp').innerHTML=rowsCmp;
-    document.getElementById('r_cmp_tip').innerHTML = gapMax
-      ? ('差得最多的是<b>'+gapMax.name+'</b>，还差 '+gapMax.d+' 份。先把这一组补上，比同时改五个地方更容易坚持。')
-      : '四组都达标了，接下来重点看钠和烹调油有没有超。';
+    let cmpTip='';
+    if(overList.length){
+      overList.sort(function(a,b){return b.over-a.over;});
+      const top=overList[0];
+      cmpTip='<b>'+top.name+'</b>比建议上限多了 '+top.over+' 份。'+(OVER_NOTE[top.name]||'');
+      if(overList.length>1){
+        const rest=overList.slice(1);
+        const same=rest.every(function(x){return x.over===rest[0].over;});
+        cmpTip += same
+          ? ('另外'+rest.map(function(x){return x.name;}).join('、')+'各多 '+rest[0].over+' 份。')
+          : ('另外'+rest.map(function(x){return x.name+'多 '+x.over+' 份';}).join('、')+'。');
+      }
+      const totalOver=overList.reduce(function(s,x){return s+x.over;},0);
+      if(overList.length>1 && totalOver>=3){
+        cmpTip+='加起来超出约 '+r1(totalOver)+' 份，总热量会跟着上去，体重有变化就回来看看这一栏。';
+      }
+    }else if(gapMax){
+      cmpTip='差得最多的是<b>'+gapMax.name+'</b>，还差 '+gapMax.d+' 份。先把这一组补上，比同时改五个地方更容易坚持。';
+    }else{
+      cmpTip='四组都在建议范围内，接下来重点看钠和烹调油有没有超。';
+    }
+    document.getElementById('r_cmp_tip').innerHTML=cmpTip;
     cmpCard.style.display='block';
   }else{
     cmpCard.style.display='none';
@@ -532,20 +561,22 @@ function calc(){
 }
 
 // 绝经情况只在「女性 且 未满 50 岁」时询问：50 岁及以上直接按 1200 mg 钙处理，不再多问一题。
-// 50 岁及以上的女性改显示一行说明，避免用户以为这一项漏了。
+// 50 岁及以上时保留同一个字段位和标签，只把下拉框换成一行只读结果，避免出现没有选项的悬空说明。
 function syncMeno(){
   const box=document.getElementById('menoField');
   if(!box) return;
-  const note=document.getElementById('menoNote');
+  const ro=document.getElementById('menoRO');
+  const sel=document.getElementById('meno');
   const sx=document.getElementById('sex').value;
   const ag=parseFloat(document.getElementById('age').value);
   const valid=!isNaN(ag)&&ag>=10;
   const isF=sx==='女';
-  const show = isF && valid && ag<50;
-  const showNote = isF && valid && ag>=50;
-  box.style.display = show ? '' : 'none';
-  if(note) note.style.display = showNote ? '' : 'none';
-  if(!show){ const s=document.getElementById('meno'); if(s) s.value='0'; }
+  const ask  = isF && valid && ag<50;   // 需要问：显示下拉
+  const skip = isF && valid && ag>=50;  // 不必问：显示只读结果
+  box.style.display = (ask||skip) ? '' : 'none';
+  if(sel) sel.style.display = ask ? '' : 'none';
+  if(ro)  ro.style.display  = skip ? '' : 'none';
+  if(!ask && sel) sel.value='0';
 }
 // 年龄逐字符输入时会先得到「5」再变成「56」，直接实时切换会让这一项闪一下，加个短延迟
 let menoTimer=null;
