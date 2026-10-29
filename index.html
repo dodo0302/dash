@@ -104,6 +104,29 @@
   .src li{margin:3px 0;}
   .src a{color:var(--purple); word-break:break-all;}
   footer{text-align:center; color:var(--muted); font-size:12px; margin-top:10px;}
+  .sharebar{margin:2px 0 14px;}
+  button.sharebtn{width:100%; padding:13px; border-radius:12px; cursor:pointer; font-size:15.5px; font-weight:600;
+    color:#fff; border:none; font-family:inherit; letter-spacing:.5px;
+    background:linear-gradient(135deg,var(--purple),var(--pink)); box-shadow:0 4px 14px rgba(155,107,214,.22); transition:.2s;}
+  button.sharebtn:hover{opacity:.94; transform:translateY(-1px);}
+  button.sharebtn:active{transform:scale(.99);}
+  button.sharebtn:disabled{opacity:.6; cursor:default;}
+  #imgmask{position:fixed; inset:0; background:rgba(30,26,36,.9); z-index:99; display:none;
+    overflow:auto; -webkit-overflow-scrolling:touch;}
+  #imgmask .bar{position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:10px;
+    padding:11px 14px; background:rgba(30,26,36,.96); border-bottom:1px solid rgba(255,255,255,.12);}
+  #imgmask .bar .tx{flex:1; color:#fff; font-size:13.5px; line-height:1.5;}
+  #imgmask .bar .close{flex:none; padding:7px 16px; border-radius:20px; border:1px solid rgba(255,255,255,.35);
+    background:transparent; color:#fff; font-size:13.5px; font-family:inherit; cursor:pointer;}
+  #imgmask .inner{max-width:520px; margin:12px auto 40px; padding:0 14px;}
+  #imgmask img{width:100%; display:block; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.35);}
+  #imgmask .hint{color:#fff; font-size:14px; line-height:1.7; text-align:center; margin:14px 0 12px;}
+  #imgmask .hint.small{font-size:12.5px; opacity:.75; margin-top:10px;}
+  #imgmask .row{display:flex; gap:12px; justify-content:center; margin-bottom:24px;}
+  #imgmask .row a,#imgmask .row button{flex:none; padding:10px 24px; border-radius:24px; border:none; font-size:14px;
+    font-family:inherit; cursor:pointer; text-decoration:none; line-height:1.4;}
+  #imgmask .dl{background:#fff; color:#7a51b8; font-weight:600;}
+  #imgmask .close{background:rgba(255,255,255,.2); color:#fff;}
   @media(max-width:620px){.grid{grid-template-columns:1fr;} .kpis{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
@@ -269,6 +292,11 @@
       <h2 data-page-node-id="zzqpSYyt1yyD6nFupaH5pR">参考一日搭配（按份数举例）</h2>
       <ul class="meal" id="r_meal" data-page-node-id="EULVlPcve3IpDHsBNLfEeU"></ul>
       <div class="tip" data-page-node-id="A70LX4Hzw2AzNE7x2tlVjk">示例仅作份数参考，实际食材可按偏好与忌口替换；烹饪以蒸、炖、炒、凉拌多样化为宜，每日用油控制在份数内。</div>
+    </div>
+
+    <div class="sharebar">
+      <button class="sharebtn" type="button" id="btn_share">把这份方案存成图片</button>
+      <div class="tip" style="text-align:center;margin-top:8px;">生成一张长图，长按就能存进手机相册，买菜时随时对照</div>
     </div>
 
     <footer data-page-node-id="MX6cgx7FNLGxmlc2ViHGqd">本工具为健康饮食参考，不替代医生或营养师诊断。慢性病人群请遵医嘱。</footer>
@@ -696,6 +724,309 @@ syncMeno();
       try{ calc(true); }catch(e){}
     }
   }
+})();
+</script>
+<div id="imgmask" role="dialog" aria-modal="true" aria-label="方案长图">
+  <div class="bar">
+    <div class="tx" id="share_hint">长按图片 → 存到相册</div>
+    <button class="close" type="button" id="share_close">关闭</button>
+  </div>
+  <div class="inner">
+    <img id="shareimg" alt="我的 DASH 每日饮食方案">
+    <div class="hint small">这张图不含任何个人信息以外的数据，也没有上传；也可以点下面的「下载图片」。</div>
+    <div class="row"><a class="dl" id="share_dl" download="DASH饮食方案.jpg">下载图片</a></div>
+  </div>
+</div>
+<script>
+/* 一键把当前方案画成一张长图：纯 canvas 手绘，不加载任何外部库，微信里也能生成 */
+(function(){
+  const W=1080, PAD=56, CW=W-PAD*2;
+  const FF='"PingFang SC","Heiti SC","Hiragino Sans GB",-apple-system,"Microsoft YaHei",sans-serif';
+  const C={ink:'#2b2b33',muted:'#6b6b76',purple:'#9b6bd6',soft:'#f4eef8',
+           line:'#ece6f0',green:'#3a9d6e',warn:'#c0392b',orange:'#c2721a'};
+
+  function $(id){ return document.getElementById(id); }
+  function tx(id){ const e=$(id); return e? e.textContent.replace(/\s+/g,' ').trim() : ''; }
+  function selTx(id,sep){
+    const e=$(id); if(!e||e.selectedIndex<0) return '';
+    let t=(e.options[e.selectedIndex].text||'').trim();
+    if(sep) t=t.split(sep)[0];
+    return t.trim();
+  }
+  function f(ctx,size,weight){ ctx.font=(weight||'400')+' '+size+'px '+FF; }
+  function rr(ctx,x,y,w,h,r){
+    const q=Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+q,y); ctx.lineTo(x+w-q,y); ctx.arcTo(x+w,y,x+w,y+q,q);
+    ctx.lineTo(x+w,y+h-q); ctx.arcTo(x+w,y+h,x+w-q,y+h,q);
+    ctx.lineTo(x+q,y+h); ctx.arcTo(x,y+h,x,y+h-q,q);
+    ctx.lineTo(x,y+q); ctx.arcTo(x,y,x+q,y,q);
+    ctx.closePath();
+  }
+  function wrapText(ctx,text,maxW){
+    const out=[]; let cur='';
+    for(let i=0;i<text.length;i++){
+      const t=cur+text[i];
+      if(ctx.measureText(t).width>maxW && cur){ out.push(cur); cur=text[i]; } else { cur=t; }
+    }
+    if(cur) out.push(cur);
+    return out;
+  }
+  function collect(){
+    const d=new Date(), p=n=>String(n).padStart(2,'0');
+    const sex=$('sex').value, age=($('age').value||'').trim(),
+          h=($('height').value||'').trim(), w=($('weight').value||'').trim(),
+          bf=($('bf').value||'').trim();
+    const act=selTx('activity','：'), goal=selTx('goal','');
+    const l1=[sex, age?age+' 岁':'', h?h+' cm':'', w?w+' kg':'', 'BMI '+tx('r_bmi')].filter(Boolean).join(' · ');
+    const l2=['活动 '+(act||'—'), goal?('目标 '+goal):'', bf?('体脂 '+bf+'%'):'', '约 '+tx('r_tier')+' kcal 档'].filter(Boolean).join(' · ');
+    const rows=[].slice.call(document.querySelectorAll('#r_table tr')).map(function(tr){
+      const t=tr.querySelectorAll('td');
+      return {k:(t[0].textContent||'').trim(), v:(t[1].textContent||'').trim()};
+    });
+    const cmpCard=$('cmp_card'), visible=cmpCard && cmpCard.style.display!=='none';
+    const cmp=visible ? [].slice.call(document.querySelectorAll('#r_cmp tr')).map(function(tr){
+      const t=tr.querySelectorAll('td'), res=(t[3].textContent||'').trim();
+      const color=/超出/.test(res)?C.orange:(/还差/.test(res)?C.warn:C.green);
+      return {k:(t[0].textContent||'').trim(), cur:(t[1].textContent||'').trim(),
+              sug:(t[2].textContent||'').trim(), res:res, color:color};
+    }) : [];
+    const notes=[].slice.call(document.querySelectorAll('#r_notes .note')).map(function(n){
+      return n.textContent.replace(/\s+/g,' ').trim();
+    }).filter(Boolean).slice(0,4);
+    const meal=[].slice.call(document.querySelectorAll('#r_meal li')).map(function(li){
+      return li.textContent.replace(/\s+/g,' ').trim();
+    });
+    return {
+      date:d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()),
+      l1:l1, l2:l2, bmi:tx('r_bmi'), bmr:tx('r_bmr'), tdee:tx('r_tdee'), target:tx('r_target'),
+      na:tx('r_na'), pro:tx('r_pro'), ca:tx('r_ca'), tip:tx('r_tiertip'),
+      rows:rows, cmp:cmp, notes:notes, meal:meal
+    };
+  }
+
+  function draw(ctx,d){
+    let y=0;
+    const g=ctx.createLinearGradient(0,0,W,1500);
+    g.addColorStop(0,'#fdf3fa'); g.addColorStop(.5,'#f8f2fc'); g.addColorStop(1,'#f1eefb');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,9000);
+    ctx.textAlign='left'; ctx.textBaseline='top';
+
+    // 抬头
+    y=56;
+    f(ctx,23,'600'); ctx.fillStyle=C.purple; ctx.fillText('DASH 健康饮食助手',PAD,y); y+=38;
+    f(ctx,50,'700'); ctx.fillStyle=C.ink; ctx.fillText('我的每日饮食方案',PAD,y); y+=68;
+    f(ctx,23,'400'); ctx.fillStyle=C.muted; ctx.fillText('生成日期 '+d.date+' · 存相册随时对照',PAD,y); y+=46;
+
+    // 基本信息
+    f(ctx,25,'400');
+    const a1=wrapText(ctx,d.l1,CW-52), a2=wrapText(ctx,d.l2,CW-52);
+    let bh=24+ (a1.length+a2.length)*37 + 22;
+    rr(ctx,PAD,y,CW,bh,16); ctx.fillStyle=C.soft; ctx.fill();
+    let ty=y+22;
+    a1.forEach(function(s){ f(ctx,25,'500'); ctx.fillStyle='#3d3d47'; ctx.fillText(s,PAD+26,ty); ty+=37; });
+    a2.forEach(function(s){ f(ctx,25,'400'); ctx.fillStyle=C.muted; ctx.fillText(s,PAD+26,ty); ty+=37; });
+    y+=bh+30;
+
+    // 卡内通用：标题
+    function head(hy,text){
+      f(ctx,27,'700'); ctx.fillStyle=C.purple;
+      rr(ctx,PAD+34,hy+3,7,26,3.5); ctx.fillStyle=C.pink; ctx.fill();
+      ctx.fillStyle=C.purple; ctx.fillText(text,PAD+54,hy);
+      return hy+52;
+    }
+
+    // 热量与体质（两排 KPI）
+    (function(){
+      const ix=34, ch=110, rows=[
+        [{v:d.bmi,l:'BMI'},{v:d.bmr,l:'基础代谢 kcal'},{v:d.tdee,l:'每日总消耗 kcal'},{v:d.target,l:'推荐摄入 kcal'}],
+        [{v:d.na,l:'钠上限 mg'},{v:d.pro,l:'蛋白质 g'},{v:d.ca,l:'钙 mg'},{v:'4700',l:'钾目标 mg'}]
+      ];
+      const h=30*2+rows.length*ch;
+      rr(ctx,PAD,y,CW,h,20); ctx.fillStyle='#fff'; ctx.fill();
+      ctx.strokeStyle=C.line; ctx.lineWidth=1; ctx.stroke();
+      const cw=(CW-ix*2)/4;
+      rows.forEach(function(r,ri){
+        r.forEach(function(c,ci){
+          const cx=PAD+ix+cw*ci, cy=y+30+ch*ri;
+          ctx.textAlign='center';
+          f(ctx,38,'700'); ctx.fillStyle=C.purple; ctx.fillText(String(c.v),cx+cw/2,cy+14);
+          f(ctx,20,'400'); ctx.fillStyle=C.muted; ctx.fillText(c.l,cx+cw/2,cy+68);
+          ctx.textAlign='left';
+        });
+      });
+      y+=h+30;
+    })();
+
+    // 份数表
+    (function(){
+      const ix=34, rh=58;
+      f(ctx,21,'400');
+      let tipLines=d.tip ? wrapText(ctx,d.tip,CW-ix*2) : [];
+      if(tipLines.length>2){ tipLines=tipLines.slice(0,2); tipLines[1]=tipLines[1].slice(0,-1)+'…'; }
+      const tipH = tipLines.length ? tipLines.length*33+14 : 0;
+      const h=28+52+ d.rows.length*rh + tipH + 20;
+      rr(ctx,PAD,y,CW,h,20); ctx.fillStyle='#fff'; ctx.fill();
+      ctx.strokeStyle=C.line; ctx.lineWidth=1; ctx.stroke();
+      let hy=head(y+28,'DASH 每日食物组份数（约 '+d.tierText+' kcal 档）');
+      d.rows.forEach(function(r,i){
+        if(i>0){
+          ctx.strokeStyle='#f4eef8'; ctx.lineWidth=1; ctx.beginPath();
+          ctx.moveTo(PAD+ix,hy-9); ctx.lineTo(PAD+CW-ix,hy-9); ctx.stroke();
+        }
+        f(ctx,25,'400'); ctx.fillStyle=C.ink; ctx.fillText(r.k,PAD+ix,hy);
+        f(ctx,26,'700'); ctx.fillStyle=C.purple; ctx.textAlign='right';
+        ctx.fillText(r.v,PAD+CW-ix,hy); ctx.textAlign='left';
+        hy+=rh;
+      });
+      if(tipLines.length){
+        hy+=4;
+        f(ctx,21,'400'); ctx.fillStyle=C.muted;
+        tipLines.forEach(function(s){ ctx.fillText(s,PAD+ix,hy); hy+=33; });
+      }
+      y+=h+30;
+    })();
+
+    // 现状对比
+    if(d.cmp.length){
+      const ix=34, rh=54, n=d.cmp.length;
+      const h=28+52+40+ n*rh + 16;
+      rr(ctx,PAD,y,CW,h,20); ctx.fillStyle='#fff'; ctx.fill();
+      ctx.strokeStyle=C.line; ctx.lineWidth=1; ctx.stroke();
+      let hy=head(y+28,'你现在吃的 vs 建议份数');
+      const inner=CW-ix*2;
+      const cx0=PAD+ix, cx1=PAD+ix+inner*0.33, cx2=PAD+ix+inner*0.55, cx3=PAD+ix+inner*0.75;
+      f(ctx,20,'400'); ctx.fillStyle=C.muted;
+      ctx.fillText('食物组',cx0,hy); ctx.fillText('你现在',cx1,hy);
+      ctx.fillText('建议',cx2,hy); ctx.fillText('结果',cx3,hy);
+      hy+=40;
+      d.cmp.forEach(function(r){
+        f(ctx,25,'400'); ctx.fillStyle=C.ink;    ctx.fillText(r.k,  cx0,hy);
+        f(ctx,25,'400'); ctx.fillStyle='#3d3d47';ctx.fillText(r.cur,cx1,hy);
+        f(ctx,25,'400'); ctx.fillStyle=C.muted;  ctx.fillText(r.sug,cx2,hy);
+        f(ctx,25,'700'); ctx.fillStyle=r.color;  ctx.fillText(r.res,cx3,hy);
+        hy+=rh;
+      });
+      y+=h+30;
+    }
+
+    // 重点提醒（最多 4 条，每条最多 3 行）
+    if(d.notes.length){
+      const ix=34, lh=40, gapN=18;
+      f(ctx,25,'400');
+      const blocks=d.notes.map(function(n){
+        let ls=wrapText(ctx,n,CW-ix*2-26);
+        if(ls.length>3){ ls=ls.slice(0,3); ls[2]=ls[2].slice(0,-1)+'…'; }
+        return ls;
+      });
+      let inner=blocks.reduce(function(s,b){ return s+b.length*lh+gapN; },0)-gapN;
+      const h=28+52+inner+22;
+      rr(ctx,PAD,y,CW,h,20); ctx.fillStyle='#fff'; ctx.fill();
+      ctx.strokeStyle=C.line; ctx.lineWidth=1; ctx.stroke();
+      let hy=head(y+28,'重点提醒');
+      blocks.forEach(function(ls){
+        ctx.beginPath(); ctx.arc(PAD+ix+6,hy+13,5,0,Math.PI*2); ctx.fillStyle=C.pink; ctx.fill();
+        f(ctx,25,'400'); ctx.fillStyle='#3d3d47';
+        ls.forEach(function(s){ ctx.fillText(s,PAD+ix+26,hy); hy+=lh; });
+        hy+=gapN;
+      });
+      y+=h+30;
+    }
+
+    // 参考一日搭配（每条最多 2 行）
+    if(d.meal.length){
+      const ix=34, lh=38, gapM=12;
+      f(ctx,24,'400');
+      const blocks=d.meal.map(function(m){
+        let ls=wrapText(ctx,m,CW-ix*2-24);
+        if(ls.length>2){ ls=ls.slice(0,2); ls[1]=ls[1].slice(0,-1)+'…'; }
+        return ls;
+      });
+      let inner=blocks.reduce(function(s,b){ return s+b.length*lh+gapM; },0)-gapM;
+      const h=28+52+inner+22;
+      rr(ctx,PAD,y,CW,h,20); ctx.fillStyle='#fff'; ctx.fill();
+      ctx.strokeStyle=C.line; ctx.lineWidth=1; ctx.stroke();
+      let hy=head(y+28,'参考一日搭配（按份数举例）');
+      blocks.forEach(function(ls){
+        f(ctx,24,'700'); ctx.fillStyle=C.purple; ctx.fillText('·',PAD+ix,hy);
+        f(ctx,24,'400'); ctx.fillStyle='#3d3d47';
+        ls.forEach(function(s){ ctx.fillText(s,PAD+ix+22,hy); hy+=lh; });
+        hy+=gapM;
+      });
+      y+=h+30;
+    }
+
+    // 页脚
+    y+=4;
+    ctx.textAlign='center';
+    f(ctx,22,'400'); ctx.fillStyle=C.muted;
+    ['份数：NIH/NHLBI《DASH 饮食计划》 · BMI：WS/T 428—2013 · 腰高比：NICE NG246',
+     '血压分档：中国高血压防治指南（2024年修订版）'].forEach(function(s){
+      ctx.fillText(s,W/2,y+16); y+=34;
+    });
+    f(ctx,26,'700'); ctx.fillStyle=C.purple; ctx.fillText('dodo0302.github.io/dash/',W/2,y+18); y+=48;
+    f(ctx,21,'400'); ctx.fillStyle=C.muted;
+    ctx.fillText('全部在本机计算，数据不上传 · 本工具不替代医生或营养师诊断',W/2,y+12); y+=40;
+    ctx.textAlign='left';
+    return y;
+  }
+
+  function build(){
+    const d=collect();
+    d.tierText=tx('r_tier');
+    const probe=document.createElement('canvas');
+    probe.width=W; probe.height=9000;
+    const h=Math.round(draw(probe.getContext('2d'),d))+44;
+    // 手机上画布有尺寸上限（iOS 约 4096px），长图自动降采样，保证微信里也能生成
+    const LIMIT=4000;
+    let sc = h<=1900 ? 2 : 1.5;
+    if(h*sc>LIMIT) sc=LIMIT/h;
+    if(W*sc>LIMIT) sc=LIMIT/W;
+    if(sc<1) sc=1;
+    let cv=document.createElement('canvas');
+    cv.width=Math.round(W*sc); cv.height=Math.round(h*sc);
+    let ctx=cv.getContext('2d');
+    ctx.scale(sc,sc);
+    draw(ctx,d);
+    // 用 JPEG（0.92）而不是 PNG：同尺寸下体积小三四倍，微信里长按保存也更稳
+    let url='';
+    try{ url=cv.toDataURL('image/jpeg',0.92); }catch(e){ url=''; }
+    if(!url){
+      cv=document.createElement('canvas'); cv.width=W; cv.height=h;
+      ctx=cv.getContext('2d'); draw(ctx,d);
+      url=cv.toDataURL('image/jpeg',0.92);
+    }
+    return url;
+  }
+
+  const btn=$('btn_share');
+  if(!btn) return;
+  const mask=$('imgmask'), im=$('shareimg'), hint=$('share_hint'), dl=$('share_dl');
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent||'');
+  if(hint) hint.textContent = isIOS ? '长按图片 → 存到相册' : '长按图片 → 保存图片';
+
+  function closeMask(){
+    mask.style.display='none';
+    document.body.style.overflow='';
+    im.removeAttribute('src');
+  }
+
+  btn.addEventListener('click', function(){
+    const old=btn.textContent;
+    btn.disabled=true; btn.textContent='正在生成图片…';
+    setTimeout(function(){
+      let url='';
+      try{ url=build(); }catch(e){ url=''; }
+      btn.disabled=false; btn.textContent=old;
+      if(!url){ alert('图片没能生成，可以直接用手机截图保存。'); return; }
+      im.src=url; dl.href=url;
+      mask.style.display='block';
+      document.body.style.overflow='hidden';
+      mask.scrollTop=0;
+    },60);
+  });
+  $('share_close').addEventListener('click', closeMask);
+  mask.addEventListener('click', function(e){ if(e.target===mask) closeMask(); });
 })();
 </script>
 </body>
