@@ -105,12 +105,18 @@
   .src a{color:var(--purple); word-break:break-all;}
   footer{text-align:center; color:var(--muted); font-size:12px; margin-top:10px;}
   .sharebar{margin:2px 0 14px;}
+  .sharebar.top{margin:0 0 16px; padding:16px 16px 12px; background:#faf7fe;
+    border:1px solid #ece2f7; border-radius:16px;}
+  .sharebar.top .lead{font-size:13px; color:#6f6a7c; line-height:1.6; text-align:center; margin-bottom:10px;}
   button.sharebtn{width:100%; padding:13px; border-radius:12px; cursor:pointer; font-size:15.5px; font-weight:600;
     color:#fff; border:none; font-family:inherit; letter-spacing:.5px;
     background:linear-gradient(135deg,var(--purple),var(--pink)); box-shadow:0 4px 14px rgba(155,107,214,.22); transition:.2s;}
   button.sharebtn:hover{opacity:.94; transform:translateY(-1px);}
   button.sharebtn:active{transform:scale(.99);}
   button.sharebtn:disabled{opacity:.6; cursor:default;}
+  button.sharebtn.minor{background:#fff; color:var(--purple); border:1.5px solid #d9c6ef;
+    box-shadow:none; font-size:14.5px; padding:11px;}
+  button.sharebtn.minor:hover{background:var(--soft); transform:none;}
   #imgmask{position:fixed; inset:0; background:rgba(30,26,36,.9); z-index:99; display:none;
     overflow:auto; -webkit-overflow-scrolling:touch;}
   #imgmask .bar{position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:10px;
@@ -237,6 +243,12 @@
   </div>
 
   <div class="result" id="result" data-page-node-id="jPPz8mR6dCCZ246AkpqDe6">
+
+    <div class="sharebar top">
+      <div class="lead">方案算好了，可以存成一张长图带走</div>
+      <button class="sharebtn" type="button" id="btn_share">把这份方案存成图片</button>
+      <div class="tip" style="text-align:center;margin-top:8px;">长按就能存进手机相册，买菜时随时对照</div>
+    </div>
     <div class="card" data-page-node-id="HbPPAIcfcfsKwLEWFLLAAp">
       <h2 data-page-node-id="HWhIoAX7EmqzRnPl2d8UA6">你的体质与热量</h2>
       <div class="kpis" data-page-node-id="67o4c2XqsOSwN7zHVdrN8s">
@@ -295,8 +307,7 @@
     </div>
 
     <div class="sharebar">
-      <button class="sharebtn" type="button" id="btn_share">把这份方案存成图片</button>
-      <div class="tip" style="text-align:center;margin-top:8px;">生成一张长图，长按就能存进手机相册，买菜时随时对照</div>
+      <button class="sharebtn minor" type="button" id="btn_share2">看完想留一份？点这里存成图片</button>
     </div>
 
     <footer data-page-node-id="MX6cgx7FNLGxmlc2ViHGqd">本工具为健康饮食参考，不替代医生或营养师诊断。慢性病人群请遵医嘱。</footer>
@@ -999,8 +1010,8 @@ syncMeno();
     return url;
   }
 
-  const btn=$('btn_share');
-  if(!btn) return;
+  const btns=Array.prototype.slice.call(document.querySelectorAll('.sharebtn'));
+  if(!btns.length) return;
   const mask=$('imgmask'), im=$('shareimg'), hint=$('share_hint'), dl=$('share_dl');
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent||'');
   if(hint) hint.textContent = isIOS ? '长按图片 → 存到相册' : '长按图片 → 保存图片';
@@ -1011,19 +1022,23 @@ syncMeno();
     im.removeAttribute('src');
   }
 
-  btn.addEventListener('click', function(){
-    const old=btn.textContent;
-    btn.disabled=true; btn.textContent='正在生成图片…';
-    setTimeout(function(){
-      let url='';
-      try{ url=build(); }catch(e){ url=''; }
-      btn.disabled=false; btn.textContent=old;
-      if(!url){ alert('图片没能生成，可以直接用手机截图保存。'); return; }
-      im.src=url; dl.href=url;
-      mask.style.display='block';
-      document.body.style.overflow='hidden';
-      mask.scrollTop=0;
-    },60);
+  btns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const old=btn.textContent;
+      btns.forEach(function(b){ b.disabled=true; });
+      btn.textContent='正在生成图片…';
+      setTimeout(function(){
+        let url='';
+        try{ url=build(); }catch(e){ url=''; }
+        btns.forEach(function(b){ b.disabled=false; });
+        btn.textContent=old;
+        if(!url){ alert('图片没能生成，可以直接用手机截图保存。'); return; }
+        im.src=url; dl.href=url;
+        mask.style.display='block';
+        document.body.style.overflow='hidden';
+        mask.scrollTop=0;
+      },60);
+    });
   });
   $('share_close').addEventListener('click', closeMask);
   mask.addEventListener('click', function(e){ if(e.target===mask) closeMask(); });
